@@ -41,9 +41,11 @@
   <button onclick="setOption1()">Option 1: Pure Revenue-Share</button>
   <button onclick="setOption2()">Option 2: Revenue-Share + Min Fee</button>
 <button onclick="setOption3()">Option 3: Optimized Equilibrium</button>
-<p>(algorithm that dynamically adjusts the fee structure based on revenue, ensuring these constraints. uses a tiered model with a conditional revenue share, solved to balance risk and reward)</p>
   <button onclick="reset()">Reset to Defaults</button>
-
+<div style="margin-top: 20px; max-width: 600px;">
+  <p><b>how option 3 works (optimized equilibrium algorithm):</b></p>
+  <p>nonprofits get zero risk—cost never exceeds their ad-driven revenue (e.g., $0 revenue = $100 cost from us, not them). groas gets a guaranteed 1% of ad spend ($100/org) minimum, covered by david a fronting up to $100/org for the first 3 orgs if revenue flops. beyond 3 orgs, we split any shortfall 50/50 (e.g., $0 revenue = $50 each hit). reward scales dynamically—revenue over $100 kicks in a share (up to 50%), so $1000 revenue = $550 total ($275 each), $5000 = $2550 ($1275 each). hits my $20k/month goal at ~40 orgs with decent ROI, keeps you growing, and nonprofits win big. tweak the sliders to see it play out!</p>
+</div>
   <div class="output">
     <p>Nonprofit Cost (Total): $<span id="nonprofitCost">200</span></p>
     <p>Groas Fee: $<span id="groasFee">100</span></p>
