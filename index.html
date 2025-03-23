@@ -99,31 +99,31 @@
     let revShareCost = (dynamicP / 100) * revenue;
     nonprofitCostPerOrg = baseCost + revShareCost;
 
-    // Risk adjustment
-    let totalCost = nonprofitCostPerOrg * numOrgs;
-    let groasFeePerOrg = nonprofitCostPerOrg * ((100 - yourSplit) / 100);
-    let yourFeePerOrg = nonprofitCostPerOrg * (yourSplit / 100);
-    let groasFee = groasFeePerOrg * numOrgs;
-    let yourFee = yourFeePerOrg * numOrgs;
-    let netGain = (revenue * numOrgs) - totalCost;
+// Risk adjustment
+let totalCost = nonprofitCostPerOrg * numOrgs;
+let groasFeePerOrg = nonprofitCostPerOrg * ((100 - yourSplit) / 100);
+let yourFeePerOrg = nonprofitCostPerOrg * (yourSplit / 100);
+let groasFee = groasFeePerOrg * numOrgs;
+let yourFee = yourFeePerOrg * numOrgs;
+let netGain = (revenue * numOrgs) - totalCost;
 
-    if (numOrgs <= 3 && groasFeePerOrg < 100) {
-      let shortfallPerOrg = 100 - groasFeePerOrg; // Your risk, up to $100/org
-      groasFee = 100 * numOrgs; // Groas gets minimum
-      yourFee -= shortfallPerOrg * numOrgs; // Subtract full shortfall from your fee
-      totalCost = groasFee + yourFee; // Nonprofit cost is sum of fees
-      netGain = (revenue * numOrgs) - totalCost; // Net gain reflects actual cost
-    } else if (numOrgs > 3 && groasFeePerOrg < 100) {
-      let shortfallPerOrg = (100 - groasFeePerOrg) / 2; // Shared risk
-      groasFee += shortfallPerOrg * numOrgs;
-      yourFee -= shortfallPerOrg * numOrgs;
-      totalCost = groasFee + yourFee; // Nonprofit cost is sum of fees
-      netGain = (revenue * numOrgs) - totalCost; // Net gain reflects actual cost
-    }
-    if (totalCost > revenue * numOrgs) {
-      totalCost = revenue * numOrgs; // Cap total cost at revenue
-      netGain = 0; // Nonprofit breaks even
-    }
+if (numOrgs <= 3 && groasFeePerOrg < 100) {
+  let shortfallPerOrg = 100 - groasFeePerOrg; // Your risk, up to $100/org
+  groasFee = 100 * numOrgs; // Groas gets minimum
+  yourFee = yourFeePerOrg * numOrgs - (shortfallPerOrg * numOrgs); // Full shortfall from initial yourFee
+  totalCost = groasFee + yourFee; // Nonprofit cost is sum of fees
+  netGain = (revenue * numOrgs) - totalCost; // Net gain reflects actual cost
+} else if (numOrgs > 3 && groasFeePerOrg < 100) {
+  let shortfallPerOrg = (100 - groasFeePerOrg) / 2; // Shared risk, $50/org from you
+  groasFee += shortfallPerOrg * numOrgs;
+  yourFee -= shortfallPerOrg * numOrgs; // You cover half the shortfall
+  totalCost = groasFee + yourFee; // Nonprofit cost is sum of fees
+  netGain = (revenue * numOrgs) - totalCost; // Net gain reflects actual cost
+}
+if (totalCost > revenue * numOrgs) {
+  totalCost = revenue * numOrgs; // Cap total cost at revenue
+  netGain = 0; // Nonprofit breaks even
+}
 
     document.getElementById("nonprofitCost").innerText = Math.round(totalCost);
     document.getElementById("groasFee").innerText = Math.round(groasFee);
