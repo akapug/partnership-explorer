@@ -70,16 +70,25 @@
     document.getElementById("yourSplitValue").innerText = yourSplit;
     document.getElementById("numOrgsValue").innerText = numOrgs;
 
-    // Optimized equilibrium logic with capped, stepped revenue share
-    let baseCost = adSpend * (baseFee / 100);
-    let threshold = baseCost; // $100 at 1% base
-    let maxRevShare = 25; // Cap at 25%
-    let stepRange = 1000; // $100 to $1100 range for stepping
-    let dynamicP = revenue <= threshold ? 0 : 
-                   revenue <= (threshold + stepRange) ? maxRevShare * ((revenue - threshold) / stepRange) :
-                   maxRevShare;
-    let revShareCost = revenue > threshold ? (dynamicP / 100) * (revenue - threshold) : 0;
-    let nonprofitCostPerOrg = baseCost + revShareCost;
+    let nonprofitCostPerOrg;
+    // Optimized equilibrium logic for Option 3 (revShare slider at 25%)
+    if (baseFee === 1 && revShare === 25) {
+      let baseCost = adSpend * (baseFee / 100);
+      let threshold = baseCost; // $100 at 1% base
+      let maxRevShare = 25; // Cap at 25%
+      let stepRange = 1000; // $100 to $1100 range
+      let dynamicP = revenue <= threshold ? 0 : 
+                     revenue <= (threshold + stepRange) ? maxRevShare * ((revenue - threshold) / stepRange) :
+                     maxRevShare;
+      let revShareCost = revenue > threshold ? (dynamicP / 100) * (revenue - threshold) : 0;
+      nonprofitCostPerOrg = baseCost + revShareCost;
+    } else {
+      // Basic math for other options
+      let baseCost = adSpend * (baseFee / 100);
+      let revShareCost = revenue * (revShare / 100);
+      nonprofitCostPerOrg = baseCost + revShareCost;
+    }
+
     let totalCost = nonprofitCostPerOrg * numOrgs;
     let groasFeePerOrg = nonprofitCostPerOrg * ((100 - yourSplit) / 100);
     let yourFeePerOrg = nonprofitCostPerOrg * (yourSplit / 100);
@@ -132,6 +141,8 @@
 
   function setOption1() {
     document.getElementById("adSpend").value = 10000;
+    document.getElementById("revenue").value = 1000;
+    document.getElementById("revenueInput").value = 1000;
     document.getElementById("baseFee").value = 0;
     document.getElementById("revShare").value = 20;
     document.getElementById("yourSplit").value = 50;
@@ -141,6 +152,8 @@
 
   function setOption2() {
     document.getElementById("adSpend").value = 10000;
+    document.getElementById("revenue").value = 1000;
+    document.getElementById("revenueInput").value = 1000;
     document.getElementById("baseFee").value = 0.5;
     document.getElementById("revShare").value = 15;
     document.getElementById("yourSplit").value = 50;
@@ -150,10 +163,10 @@
 
   function setOption3() {
     document.getElementById("adSpend").value = 10000;
-    document.getElementById("revenue").value = 110;
-    document.getElementById("revenueInput").value = 110;
+    document.getElementById("revenue").value = 1000;
+    document.getElementById("revenueInput").value = 1000;
     document.getElementById("baseFee").value = 1;
-    document.getElementById("revShare").value = 25; // Max cap, stepped up
+    document.getElementById("revShare").value = 25; // Triggers optimized logic
     document.getElementById("yourSplit").value = 50;
     document.getElementById("numOrgs").value = 1;
     update();
