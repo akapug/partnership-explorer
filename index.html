@@ -171,8 +171,6 @@ if (totalCost > revenue * numOrgs) {
 
   function setOption3() {
     document.getElementById("adSpend").value = 10000;
-    document.getElementById("revenue").value = 1000;
-    document.getElementById("revenueInput").value = 1000;
     document.getElementById("baseFee").value = 1;
     document.getElementById("revShare").value = 10; // Base case, tweak to 20 for full setup
     document.getElementById("yourSplit").value = 50;
@@ -200,7 +198,7 @@ if (totalCost > revenue * numOrgs) {
       parseFloat(document.getElementById("yourFee").innerText),
       parseFloat(document.getElementById("netGain").innerText)
     ];
-    const labels = ["Nonprofit Cost", "Groas Fee", "David A Fee", "Net Gain"];
+    const labels = ["Nonprofit Cost", "Groas Fee", "David A. Fee", "Org Net Gain"];
     const colors = ["#ff6384", "#36a2eb", "#ffcd56", "#4bc0c0"];
     const maxValue = Math.max(...values.map(Math.abs), 1000); // Scale to max or 1000
 
