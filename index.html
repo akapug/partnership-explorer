@@ -97,30 +97,30 @@
     let yourFee = yourFeePerOrg * numOrgs;
     let netGain = (revenue * numOrgs) - totalCost;
 
-// Risk adjustment
-if (nonprofitCostPerOrg > revenue) {
-  nonprofitCostPerOrg = revenue; // Cap cost at revenue for zero nonprofit risk
-}
-let totalCost = nonprofitCostPerOrg * numOrgs;
-let groasFeePerOrg = nonprofitCostPerOrg * ((100 - yourSplit) / 100);
-let yourFeePerOrg = nonprofitCostPerOrg * (yourSplit / 100);
-let groasFee = groasFeePerOrg * numOrgs;
-let yourFee = yourFeePerOrg * numOrgs;
-let netGain = (revenue * numOrgs) - totalCost;
+    // Risk adjustment
+    if (nonprofitCostPerOrg > revenue) {
+      nonprofitCostPerOrg = revenue; // Cap cost at revenue for zero nonprofit risk
+    }
+    totalCost = nonprofitCostPerOrg * numOrgs;
+    groasFeePerOrg = nonprofitCostPerOrg * ((100 - yourSplit) / 100);
+    yourFeePerOrg = nonprofitCostPerOrg * (yourSplit / 100);
+    groasFee = groasFeePerOrg * numOrgs;
+    yourFee = yourFeePerOrg * numOrgs;
+    netGain = (revenue * numOrgs) - totalCost;
 
-if (numOrgs <= 3 && groasFeePerOrg < 100) {
-  let shortfallPerOrg = 100 - groasFeePerOrg; // Your risk, up to $100/org
-  groasFee = 100 * numOrgs; // Groas gets minimum
-  yourFee -= shortfallPerOrg * numOrgs; // Your fee goes negative
-  totalCost = revenue * numOrgs; // Nonprofit cost stays at revenue
-  netGain = 0; // Nonprofit breaks even
-} else if (numOrgs > 3 && groasFeePerOrg < 100) {
-  let shortfallPerOrg = (100 - groasFeePerOrg) / 2; // Shared risk
-  groasFee += shortfallPerOrg * numOrgs;
-  yourFee -= shortfallPerOrg * numOrgs;
-  totalCost = revenue * numOrgs; // Nonprofit cost stays at revenue
-  netGain = 0; // Nonprofit breaks even
-}
+    if (numOrgs <= 3 && groasFeePerOrg < 100) {
+      let shortfallPerOrg = 100 - groasFeePerOrg; // Your risk, up to $100/org
+      groasFee = 100 * numOrgs; // Groas gets minimum
+      yourFee -= shortfallPerOrg * numOrgs; // Your fee goes negative
+      totalCost = revenue * numOrgs; // Nonprofit cost stays at revenue
+      netGain = 0; // Nonprofit breaks even
+    } else if (numOrgs > 3 && groasFeePerOrg < 100) {
+      let shortfallPerOrg = (100 - groasFeePerOrg) / 2; // Shared risk
+      groasFee += shortfallPerOrg * numOrgs;
+      yourFee -= shortfallPerOrg * numOrgs;
+      totalCost = revenue * numOrgs; // Nonprofit cost stays at revenue
+      netGain = 0; // Nonprofit breaks even
+    }
 
     document.getElementById("nonprofitCost").innerText = Math.round(totalCost);
     document.getElementById("groasFee").innerText = Math.round(groasFee);
@@ -128,6 +128,8 @@ if (numOrgs <= 3 && groasFeePerOrg < 100) {
     document.getElementById("netGain").innerText = Math.round(netGain);
     document.getElementById("netGain").className = netGain >= 0 ? "positive" : "negative";
     document.getElementById("orgsNeeded").innerText = yourFeePerOrg > 0 ? Math.ceil(20000 / yourFeePerOrg) : "N/A";
+
+    drawChart(); // Add chart update
   }
 
   function updateRevenueInput() {
@@ -175,6 +177,8 @@ if (numOrgs <= 3 && groasFeePerOrg < 100) {
 
   function setOption3() {
     document.getElementById("adSpend").value = 10000;
+    document.getElementById("revenue").value = 1000;
+    document.getElementById("revenueInput").value = 1000;
     document.getElementById("baseFee").value = 1;
     document.getElementById("revShare").value = 10; // Base case, tweak to 20 for full setup
     document.getElementById("yourSplit").value = 50;
@@ -193,9 +197,56 @@ if (numOrgs <= 3 && groasFeePerOrg < 100) {
     update();
   }
 
-  window.onload = update;
-</script>
+  function drawChart() {
+    const canvas = document.getElementById("revenueChart");
+    const ctx = canvas.getContext("2d");
+    const values = [
+      parseFloat(document.getElementById("nonprofitCost").innerText),
+      parseFloat(document.getElementById("groasFee").innerText),
+      parseFloat(document.getElementById("yourFee").innerText),
+      parseFloat(document.getElementById("netGain").innerText)
+    ];
+    const labels = ["Nonprofit Cost", "Groas Fee", "David A Fee", "Net Gain"];
+    const colors = ["#ff6384", "#36a2eb", "#ffcd56", "#4bc0c0"];
+    const maxValue = Math.max(...values.map(Math.abs), 1000); // Scale to max or 1000
 
+    // Clear canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Draw bars
+    const barWidth = 80;
+    const spacing = 20;
+    const startX = 20;
+    const baseY = canvas.height - 20;
+
+    for (let i = 0; i < values.length; i++) {
+      const height = (values[i] / maxValue) * (canvas.height - 40);
+      const x = startX + i * (barWidth + spacing);
+      const y = values[i] >= 0 ? baseY - height : baseY;
+
+      ctx.fillStyle = colors[i];
+      ctx.fillRect(x, y, barWidth, values[i] >= 0 ? height : -height);
+
+      // Label
+      ctx.fillStyle = "#000";
+      ctx.font = "12px Arial";
+      ctx.textAlign = "center";
+      ctx.fillText(labels[i], x + barWidth / 2, baseY + 15);
+      ctx.fillText(`$${values[i]}`, x + barWidth / 2, y - 5 * (values[i] >= 0 ? 1 : -1));
+    }
+
+    // Zero line
+    ctx.beginPath();
+    ctx.moveTo(0, baseY);
+    ctx.lineTo(canvas.width, baseY);
+    ctx.strokeStyle = "#ccc";
+    ctx.stroke();
+  }
+
+  window.onload = function() {
+    update(); // Initial call includes chart
+  };
+</script>
 <div style="margin-top: 20px;">
   <h3>Revenue Breakdown</h3>
   <canvas id="revenueChart" width="400" height="200"></canvas>
