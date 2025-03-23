@@ -87,41 +87,37 @@
     document.getElementById("yourSplitValue").innerText = yourSplit;
     document.getElementById("numOrgsValue").innerText = numOrgs;
 
-    let nonprofitCostPerOrg;
-    // New stepped logic from 0 to $1000 for all caps
-    let baseCost = adSpend * (baseFee / 100);
-    let threshold = 0; // Start at $0
-    let maxRevShare = revShare; // Slider cap
-    let stepRange = 1000; // 0 to $1000 range
-    let dynamicP = revenue <= threshold ? 0 : 
-                   revenue <= stepRange ? maxRevShare * (revenue / stepRange) :
-                   maxRevShare;
-    let revShareCost = (dynamicP / 100) * revenue;
-    nonprofitCostPerOrg = baseCost + revShareCost;
+let nonprofitCostPerOrg;
+// Base cost + revenue share (0% at $0, scales to revShare% at $1000)
+let baseCost = adSpend * (baseFee / 100);
+let revShareRate = revenue <= 0 ? 0 : (revenue <= 1000 ? revShare * (revenue / 1000) : revShare);
+let revShareCost = (revShareRate / 100) * revenue;
+nonprofitCostPerOrg = baseCost + revShareCost;
 
-// Risk adjustment
+// Calculate total cost and split
 let totalCost = nonprofitCostPerOrg * numOrgs;
-let groasFeePerOrg = nonprofitCostPerOrg * ((100 - yourSplit) / 100);
-let yourFeePerOrg = nonprofitCostPerOrg * (yourSplit / 100);
-let groasFee = groasFeePerOrg * numOrgs;
-let yourFee = yourFeePerOrg * numOrgs;
-let netGain = (revenue * numOrgs) - totalCost;
+let groasFee = totalCost * ((100 - yourSplit) / 100);
+let yourFee = totalCost * (yourSplit / 100);
 
-if (groasFeePerOrg < 100) {
-  groasFee = 100 * numOrgs; // Groas gets $100/org minimum
+// Ensure Groas gets $100/org minimum
+let groasMinFee = 100 * numOrgs;
+if (groasFee < groasMinFee) {
+  let shortfall = groasMinFee - groasFee;
+  groasFee = groasMinFee;
   if (numOrgs <= 3) {
-    yourFee = totalCost - groasFee; // You cover whatever’s needed to balance, up to -$100/org
+    yourFee -= shortfall; // You cover full shortfall up to 3 orgs
   } else {
-    let shortfallPerOrg = 100 - groasFeePerOrg; // Shared shortfall after 3 orgs
-    groasFee -= (shortfallPerOrg / 2) * numOrgs; // Groas covers half
-    yourFee -= (shortfallPerOrg / 2) * numOrgs; // You cover half
+    groasFee -= shortfall / 2; // Split shortfall beyond 3 orgs
+    yourFee -= shortfall / 2;
   }
-  totalCost = groasFee + yourFee; // Nonprofit cost is sum of fees
-  netGain = (revenue * numOrgs) - totalCost; // Net gain reflects actual cost
 }
+
+// Cap nonprofit cost at revenue, adjust net gain
+totalCost = groasFee + yourFee;
+let netGain = (revenue * numOrgs) - totalCost;
 if (totalCost > revenue * numOrgs) {
-  totalCost = revenue * numOrgs; // Cap total cost at revenue
-  netGain = 0; // Nonprofit breaks even
+  totalCost = revenue * numOrgs;
+  netGain = 0;
 }
 
     document.getElementById("nonprofitCost").innerText = Math.round(totalCost);
