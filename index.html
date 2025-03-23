@@ -73,13 +73,15 @@
 
 <script>
   function update() {
-    let adSpend = parseFloat(document.getElementById("adSpend").value);
-    let revenue = parseFloat(document.getElementById("revenue").value);
-    let baseFee = parseFloat(document.getElementById("baseFee").value);
-    let revShare = parseFloat(document.getElementById("revShare").value);
-    let yourSplit = parseFloat(document.getElementById("yourSplit").value);
-    let numOrgs = parseFloat(document.getElementById("numOrgs").value);
+    // Get slider values
+    const adSpend = parseFloat(document.getElementById("adSpend").value);
+    const revenue = parseFloat(document.getElementById("revenue").value);
+    const baseFee = parseFloat(document.getElementById("baseFee").value);
+    const revShare = parseFloat(document.getElementById("revShare").value);
+    const yourSplit = parseFloat(document.getElementById("yourSplit").value);
+    const numOrgs = parseFloat(document.getElementById("numOrgs").value);
 
+    // Update displayed values
     document.getElementById("adSpendValue").innerText = adSpend;
     document.getElementById("revenueValue").innerText = revenue;
     document.getElementById("baseFeeValue").innerText = baseFee;
@@ -87,39 +89,60 @@
     document.getElementById("yourSplitValue").innerText = yourSplit;
     document.getElementById("numOrgsValue").innerText = numOrgs;
 
-let nonprofitCostPerOrg;
-// Base cost + revenue share (0% at $0, scales to revShare% at $1000)
-let baseCost = adSpend * (baseFee / 100);
-let revShareRate = revenue <= 0 ? 0 : (revenue <= 1000 ? revShare * (revenue / 1000) : revShare);
-let revShareCost = (revShareRate / 100) * revenue;
-nonprofitCostPerOrg = baseCost + revShareCost;
-
-// Total cost before adjustments
-let totalCost = nonprofitCostPerOrg * numOrgs;
-let groasFee = Math.max(100 * numOrgs, totalCost * ((100 - yourSplit) / 100)); // Groas minimum $100/org
-let yourFee = totalCost - groasFee; // Your fee covers rest, can go negative
-
-// Cap total cost at revenue
-totalCost = Math.min(totalCost, revenue * numOrgs);
-netGain = (revenue * numOrgs) - totalCost; // No 'let' here, just assign
-
-// Adjust fees if revenue-limited
-if (totalCost < groasFee + yourFee) {
-  if (numOrgs <= 3) {
-    yourFee = totalCost - groasFee; // You cover full shortfall up to -$100/org
-  } else {
-    let shortfall = (groasFee + yourFee) - totalCost;
-    groasFee -= shortfall / 2; // Split shortfall beyond 3 orgs
-    yourFee -= shortfall / 2;
-  }
-}
-
-    document.getElementById("nonprofitCost").innerText = Math.round(totalCost);
+    // Step 1: Calculate raw fees based on model
+    const baseCost = adSpend * (baseFee / 100);
+    
+    // Revenue share scales from 0% at $0 to full % at $1000
+    const revShareRate = revenue <= 0 ? 0 : Math.min(revShare * (revenue / 1000), revShare);
+    const revShareCost = (revShareRate / 100) * revenue;
+    
+    // Raw fee per org before any adjustments
+    const rawFeePerOrg = baseCost + revShareCost;
+    
+    // Step 2: Cap nonprofit cost at their revenue (no risk to nonprofits)
+    const nonprofitCost = Math.min(rawFeePerOrg * numOrgs, revenue * numOrgs);
+    
+    // Step 3: Calculate Groas minimum fee
+    const groasMinimum = 100 * numOrgs;
+    
+    // Step 4: Calculate standard fee split based on yourSplit
+    const standardGroasFee = nonprofitCost * ((100 - yourSplit) / 100);
+    const standardDavidFee = nonprofitCost * (yourSplit / 100);
+    
+    // Step 5: Apply Groas minimum and calculate David's risk coverage
+    let groasFee, davidFee;
+    
+    if (standardGroasFee >= groasMinimum) {
+        // Normal case - Groas gets more than minimum
+        groasFee = standardGroasFee;
+        davidFee = standardDavidFee;
+    } else {
+        // Groas minimum case - David covers shortfall
+        groasFee = groasMinimum;
+        davidFee = nonprofitCost - groasMinimum;
+        
+        // Apply risk sharing rules for >3 orgs
+        if (numOrgs > 3 && davidFee < 0) {
+            const shortfall = groasMinimum - nonprofitCost;
+            groasFee = groasMinimum - (shortfall / 2);
+            davidFee = nonprofitCost - groasFee;
+        }
+    }
+    
+    // Step 6: Calculate net gain for nonprofits
+    const netGain = (revenue * numOrgs) - nonprofitCost;
+    
+    // Calculate orgs needed for $20K
+    const feePerOrg = davidFee / numOrgs;
+    const orgsNeeded = feePerOrg > 0 ? Math.ceil(20000 / feePerOrg) : "N/A";
+    
+    // Update display
+    document.getElementById("nonprofitCost").innerText = Math.round(nonprofitCost);
     document.getElementById("groasFee").innerText = Math.round(groasFee);
-    document.getElementById("yourFee").innerText = Math.round(yourFee);
+    document.getElementById("yourFee").innerText = Math.round(davidFee);
     document.getElementById("netGain").innerText = Math.round(netGain);
     document.getElementById("netGain").className = netGain >= 0 ? "positive" : "negative";
-    document.getElementById("orgsNeeded").innerText = yourFeePerOrg > 0 ? Math.ceil(20000 / yourFeePerOrg) : "N/A";
+    document.getElementById("orgsNeeded").innerText = orgsNeeded;
 
     drawChart();
   }
@@ -195,45 +218,60 @@ function drawChart() {
   const canvas = document.getElementById("revenueChart");
   const ctx = canvas.getContext("2d");
   const values = [
-    parseFloat(document.getElementById("nonprofitCost").innerText) || 0,
-    parseFloat(document.getElementById("groasFee").innerText) || 0,
-    parseFloat(document.getElementById("yourFee").innerText) || 0,
-    parseFloat(document.getElementById("netGain").innerText) || 0
+    Math.max(0, parseFloat(document.getElementById("nonprofitCost").innerText) || 0),
+    Math.max(0, parseFloat(document.getElementById("groasFee").innerText) || 0),
+    parseFloat(document.getElementById("yourFee").innerText) || 0, // Allow negative
+    Math.max(0, parseFloat(document.getElementById("netGain").innerText) || 0)
   ];
   const labels = ["Nonprofit Cost", "Groas Fee", "David A Fee", "Org Net Gain"];
   const colors = ["#ff6384", "#36a2eb", "#ffcd56", "#4bc0c0"];
-  const maxValue = Math.max(...values.map(Math.abs), 1000); // Scale to max or 1000
-
+  
   // Clear canvas
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-
+  
+  // Set dimensions
+  const chartHeight = canvas.height - 50;
+  const chartWidth = canvas.width - 100;
+  const barWidth = chartWidth / (values.length * 2);
+  const spacing = barWidth;
+  
+  // Find max value for scaling (ignoring negative)
+  const maxValue = Math.max(...values.map(v => Math.abs(v)), 1);
+  const scale = chartHeight / maxValue;
+  
   // Draw bars
-  const barWidth = 80;
-  const spacing = 20;
-  const startX = 20;
-  const baseY = canvas.height - 20;
-
   for (let i = 0; i < values.length; i++) {
-    const height = (values[i] / maxValue) * (canvas.height - 40);
-    const x = startX + i * (barWidth + spacing);
-    const y = values[i] >= 0 ? baseY - height : baseY;
-
-    ctx.fillStyle = colors[i];
-    ctx.fillRect(x, y, barWidth, values[i] >= 0 ? height : -height);
-
-    // Label
+    const value = values[i];
+    const x = 50 + i * (barWidth + spacing);
+    
+    // Handle positive and negative values differently
+    if (value >= 0) {
+      const barHeight = value * scale;
+      ctx.fillStyle = colors[i];
+      ctx.fillRect(x, chartHeight - barHeight, barWidth, barHeight);
+    } else {
+      const barHeight = Math.abs(value) * scale;
+      ctx.fillStyle = colors[i];
+      ctx.fillRect(x, chartHeight, barWidth, barHeight);
+    }
+    
+    // Draw value
     ctx.fillStyle = "#000";
     ctx.font = "12px Arial";
     ctx.textAlign = "center";
-    ctx.fillText(labels[i], x + barWidth / 2, baseY + 15);
-    ctx.fillText(`$${values[i]}`, x + barWidth / 2, y - 5 * (values[i] >= 0 ? 1 : -1));
+    ctx.fillText("$" + Math.round(value), x + barWidth/2, value >= 0 ? 
+      chartHeight - (value * scale) - 5 : 
+      chartHeight + Math.abs(value) * scale + 15);
+    
+    // Draw label
+    ctx.fillText(labels[i], x + barWidth/2, canvas.height - 10);
   }
-
-  // Zero line
+  
+  // Draw zero line
+  ctx.strokeStyle = "#888";
   ctx.beginPath();
-  ctx.moveTo(0, baseY);
-  ctx.lineTo(canvas.width, baseY);
-  ctx.strokeStyle = "#ccc";
+  ctx.moveTo(40, chartHeight);
+  ctx.lineTo(canvas.width - 40, chartHeight);
   ctx.stroke();
 }
   window.onload = update;
