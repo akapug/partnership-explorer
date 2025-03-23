@@ -101,7 +101,7 @@ let yourFee = totalCost - groasFee; // Your fee covers rest, can go negative
 
 // Cap total cost at revenue
 totalCost = Math.min(totalCost, revenue * numOrgs);
-let netGain = (revenue * numOrgs) - totalCost;
+netGain = (revenue * numOrgs) - totalCost; // No 'let' here, just assign
 
 // Adjust fees if revenue-limited
 if (totalCost < groasFee + yourFee) {
@@ -112,13 +112,6 @@ if (totalCost < groasFee + yourFee) {
     groasFee -= shortfall / 2; // Split shortfall beyond 3 orgs
     yourFee -= shortfall / 2;
   }
-}
-// Cap nonprofit cost at revenue, adjust net gain
-totalCost = groasFee + yourFee;
-let netGain = (revenue * numOrgs) - totalCost;
-if (totalCost > revenue * numOrgs) {
-  totalCost = revenue * numOrgs;
-  netGain = 0;
 }
 
     document.getElementById("nonprofitCost").innerText = Math.round(totalCost);
