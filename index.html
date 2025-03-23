@@ -44,7 +44,7 @@
   <button onclick="reset()">Reset to Defaults</button>
 <div style="margin-top: 20px; max-width: 600px;">
   <p><b>how option 3 works (optimized equilibrium):</b></p>
-  <p>nonprofits get zero risk—cost never tops their ad-driven revenue ($0 revenue = $100 cost from us). groas gets a 1% ad spend minimum ($100/org), covered by david a fronting up to $100/org for the first 3 orgs if revenue’s low. beyond 3 orgs, we split any shortfall 50/50 (e.g., $0 revenue = $50 each hit). revenue share starts at 0% below $100, ramps linearly to 25% from $100 to $1100, then caps at 25%—so $600 revenue = $162 ($81 each), $2000 = $575 ($287 each). keeps it fair—nonprofits win big, groas grows, and i hit $20k/month at ~70 orgs with decent ROI. tweak the sliders to test it!</p>
+  <p>nonprofits get zero risk—cost never tops their ad-driven revenue ($0 revenue = $100 cost from us). groas gets a 1% ad spend minimum ($100/org), covered by david a fronting up to $100/org for the first 3 orgs if revenue’s low. beyond 3 orgs, we split any shortfall 50/50 (e.g., $0 rev = $50 each cost). revenue share starts at 0% below $100, ramps linearly to 25% from $100 to $1100, then caps at 25%—so David A. catchs up at $731/mo in org rev. keeps it fair—nonprofits win big, groas grows, and i get ROI with scale. tweak the sliders to test it!</p>
 </div>
   <div class="output">
     <p>Nonprofit Cost (Total): $<span id="nonprofitCost">200</span></p>
@@ -159,8 +159,8 @@
 
   function setOption3() {
     document.getElementById("adSpend").value = 10000;
-    document.getElementById("revenue").value = 110;
-    document.getElementById("revenueInput").value = 110;
+    document.getElementById("revenue").value = 731;
+    document.getElementById("revenueInput").value = 731;
     document.getElementById("baseFee").value = 1;
     document.getElementById("revShare").value = 25; // Triggers optimized logic
     document.getElementById("yourSplit").value = 50;
