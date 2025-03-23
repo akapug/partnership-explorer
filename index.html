@@ -43,8 +43,8 @@
 <button onclick="setOption3()">Option 3: Optimized Equilibrium</button>
   <button onclick="reset()">Reset to Defaults</button>
 <div style="margin-top: 20px; max-width: 600px;">
-  <p><b>how option 3 works (optimized equilibrium algorithm):</b></p>
-  <p>nonprofits get zero risk—cost never exceeds their ad-driven revenue (e.g., $0 revenue = $100 cost from us, not them). groas gets a guaranteed 1% of ad spend ($100/org) minimum, covered by david a fronting up to $100/org for the first 3 orgs if revenue flops. beyond 3 orgs, we split any shortfall 50/50 (e.g., $0 revenue = $50 each hit). reward scales dynamically—revenue over $100 kicks in a share (up to 50%), so $1000 revenue = $550 total ($275 each), $5000 = $2550 ($1275 each). hits my $20k/month goal at ~40 orgs with decent ROI, keeps you growing, and nonprofits win big. tweak the sliders to see it play out!</p>
+  <p><b>how option 3 works (optimized equilibrium):</b></p>
+  <p>nonprofits get zero risk—cost never tops their ad-driven revenue ($0 revenue = $100 cost from us). groas gets a 1% ad spend minimum ($100/org), covered by david a fronting up to $100/org for the first 3 orgs if revenue’s low. beyond 3 orgs, we split any shortfall 50/50 (e.g., $0 revenue = $50 each hit). revenue share starts at 0% below $100, ramps linearly to 25% from $100 to $1100, then caps at 25%—so $600 revenue = $162 ($81 each), $2000 = $575 ($287 each). keeps it fair—nonprofits win big, groas grows, and i hit $20k/month at ~70 orgs with decent ROI. tweak the sliders to test it!</p>
 </div>
   <div class="output">
     <p>Nonprofit Cost (Total): $<span id="nonprofitCost">200</span></p>
@@ -70,11 +70,15 @@
     document.getElementById("yourSplitValue").innerText = yourSplit;
     document.getElementById("numOrgsValue").innerText = numOrgs;
 
-    // Optimized equilibrium logic
+    // Optimized equilibrium logic with capped, stepped revenue share
     let baseCost = adSpend * (baseFee / 100);
-    let threshold = baseCost; // Ties threshold to base fee
-    let dynamicP = revenue > threshold ? Math.min(50, ((revenue - threshold) / revenue) * 100) : 0;
-    let revShareCost = revenue > threshold ? dynamicP / 100 * (revenue - threshold) : 0;
+    let threshold = baseCost; // $100 at 1% base
+    let maxRevShare = 25; // Cap at 25%
+    let stepRange = 1000; // $100 to $1100 range for stepping
+    let dynamicP = revenue <= threshold ? 0 : 
+                   revenue <= (threshold + stepRange) ? maxRevShare * ((revenue - threshold) / stepRange) :
+                   maxRevShare;
+    let revShareCost = revenue > threshold ? (dynamicP / 100) * (revenue - threshold) : 0;
     let nonprofitCostPerOrg = baseCost + revShareCost;
     let totalCost = nonprofitCostPerOrg * numOrgs;
     let groasFeePerOrg = nonprofitCostPerOrg * ((100 - yourSplit) / 100);
@@ -85,10 +89,10 @@
 
     // Risk adjustment
     if (numOrgs <= 3 && groasFeePerOrg < 100) {
-      let shortfallPerOrg = 100 - groasFeePerOrg;
-      groasFee = 100 * numOrgs; // You front the difference
-      yourFee -= shortfallPerOrg * numOrgs; // Your risk, capped at $100/org
-      totalCost = groasFee + yourFee; // Adjust total cost
+      let shortfallPerOrg = Math.min(100 - groasFeePerOrg, 100); // Your risk capped at $100/org
+      groasFee = 100 * numOrgs; // Groas gets minimum
+      yourFee -= shortfallPerOrg * numOrgs; // Your risk, max $300 total
+      totalCost = groasFee + yourFee;
       netGain = (revenue * numOrgs) - totalCost;
     } else if (numOrgs > 3 && groasFeePerOrg < 100) {
       let shortfallPerOrg = (100 - groasFeePerOrg) / 2; // Shared risk
@@ -128,8 +132,6 @@
 
   function setOption1() {
     document.getElementById("adSpend").value = 10000;
-    document.getElementById("revenue").value = 1000;
-    document.getElementById("revenueInput").value = 1000;
     document.getElementById("baseFee").value = 0;
     document.getElementById("revShare").value = 20;
     document.getElementById("yourSplit").value = 50;
@@ -139,8 +141,6 @@
 
   function setOption2() {
     document.getElementById("adSpend").value = 10000;
-    document.getElementById("revenue").value = 1000;
-    document.getElementById("revenueInput").value = 1000;
     document.getElementById("baseFee").value = 0.5;
     document.getElementById("revShare").value = 15;
     document.getElementById("yourSplit").value = 50;
@@ -152,8 +152,8 @@
     document.getElementById("adSpend").value = 10000;
     document.getElementById("revenue").value = 110;
     document.getElementById("revenueInput").value = 110;
-    document.getElementById("baseFee").value = 1;   // 1% base
-    document.getElementById("revShare").value = 50; // Max cap, dynamically adjusted
+    document.getElementById("baseFee").value = 1;
+    document.getElementById("revShare").value = 25; // Max cap, stepped up
     document.getElementById("yourSplit").value = 50;
     document.getElementById("numOrgs").value = 1;
     update();
