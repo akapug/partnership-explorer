@@ -108,13 +108,13 @@ let yourFee = yourFeePerOrg * numOrgs;
 let netGain = (revenue * numOrgs) - totalCost;
 
 if (groasFeePerOrg < 100) {
-  let shortfallPerOrg = 100 - groasFeePerOrg; // Shortfall to reach Groas' minimum
-  groasFee = 100 * numOrgs; // Groas gets $100/org
+  groasFee = 100 * numOrgs; // Groas gets $100/org minimum
   if (numOrgs <= 3) {
-    yourFee = -shortfallPerOrg * numOrgs; // You cover full shortfall up to 3 orgs
+    yourFee = totalCost - groasFee; // You cover whatever’s needed to balance, up to -$100/org
   } else {
-    yourFee -= (shortfallPerOrg / 2) * numOrgs; // Split shortfall after 3 orgs
-    groasFee -= (shortfallPerOrg / 2) * numOrgs; // Adjust Groas fee for shared risk
+    let shortfallPerOrg = 100 - groasFeePerOrg; // Shared shortfall after 3 orgs
+    groasFee -= (shortfallPerOrg / 2) * numOrgs; // Groas covers half
+    yourFee -= (shortfallPerOrg / 2) * numOrgs; // You cover half
   }
   totalCost = groasFee + yourFee; // Nonprofit cost is sum of fees
   netGain = (revenue * numOrgs) - totalCost; // Net gain reflects actual cost
