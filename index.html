@@ -5,7 +5,9 @@
   <style>
     body { font-family: Arial; margin: 20px; }
     .slider { width: 300px; }
-    .output { margin-top: 20px; }
+    .output-container { display: flex; flex-wrap: wrap; gap: 20px; margin-top: 20px; }
+    .output-text { flex: 1; min-width: 200px; }
+    .output-chart { flex: 1; min-width: 400px; max-width: 400px; }
     .positive { color: green; }
     .negative { color: red; }
     button { margin-top: 10px; padding: 5px 10px; }
@@ -21,7 +23,7 @@
   </script>
 </head>
 <body>
-  <h2>Nonprofit Revenue Model Explorer (monthly)</h2>
+  <h2>Groas Nonprofit Revenue Model Explorer (monthly)</h2>
   <p>Note: Option 1 and 2 default to values to get the same revenue as the current model at -90% ad spend ROI. <br> Option 3 optimizes for all—0% revenue share at $0, hits 10% at $1,000 revenue (20% if full setup), and scales cleanly from there.</p>
   <label title="Monthly Google Ad Grants spend per org">Ad Spend ($/month): <input type="range" min="0" max="10000" value="10000" id="adSpend" class="slider" oninput="update()"></label>
   <span id="adSpendValue">10000</span><br>
@@ -49,12 +51,19 @@
     <p>The algorithm ensures zero risk for nonprofits by only charging from new revenue, starting at 0% at $0 and scaling to 10% at $1,000 (20% for full setup). It optimizes for all—Groas gets a steady minimum and upside to set up and maintain optimized accounts, I scale with revenue, and nonprofits keep most of their gains.</p>
   </div>
 
-  <div class="output">
-    <p>Nonprofit Cost (Total): $<span id="nonprofitCost">200</span></p>
-    <p>Groas Fee: $<span id="groasFee">100</span></p>
-    <p>David A Fee: $<span id="yourFee">100</span></p>
-    <p>Nonprofit Net Gain: $<span id="netGain">800</span></p>
-    <p>Orgs Needed for $20k: <span id="orgsNeeded">200</span></p>
+  <div class="output-container">
+    <div class="output-text">
+      <p>Current Scenario: <span id="currentScenario">Reset to Defaults</span></p>
+      <p>Nonprofit Cost (Total): $<span id="nonprofitCost">200</span></p>
+      <p>Groas Fee: $<span id="groasFee">100</span></p>
+      <p>David A Fee: $<span id="yourFee">100</span></p>
+      <p>Nonprofit Net Gain: $<span id="netGain">800</span></p>
+      <p>Orgs Needed for $20k: <span id="orgsNeeded">200</span></p>
+    </div>
+    <div class="output-chart">
+      <h3>Revenue Breakdown</h3>
+      <canvas id="revenueChart" width="400" height="200"></canvas>
+    </div>
   </div>
 
   <div style="margin-top: 20px; max-width: 600px;">
@@ -90,31 +99,31 @@
     let revShareCost = (dynamicP / 100) * revenue;
     nonprofitCostPerOrg = baseCost + revShareCost;
 
-// Risk adjustment
-let totalCost = nonprofitCostPerOrg * numOrgs;
-let groasFeePerOrg = nonprofitCostPerOrg * ((100 - yourSplit) / 100);
-let yourFeePerOrg = nonprofitCostPerOrg * (yourSplit / 100);
-let groasFee = groasFeePerOrg * numOrgs;
-let yourFee = yourFeePerOrg * numOrgs;
-let netGain = (revenue * numOrgs) - totalCost;
+    // Risk adjustment
+    let totalCost = nonprofitCostPerOrg * numOrgs;
+    let groasFeePerOrg = nonprofitCostPerOrg * ((100 - yourSplit) / 100);
+    let yourFeePerOrg = nonprofitCostPerOrg * (yourSplit / 100);
+    let groasFee = groasFeePerOrg * numOrgs;
+    let yourFee = yourFeePerOrg * numOrgs;
+    let netGain = (revenue * numOrgs) - totalCost;
 
-if (numOrgs <= 3 && groasFeePerOrg < 100) {
-  let shortfallPerOrg = 100 - groasFeePerOrg; // Your risk, up to $100/org
-  groasFee = 100 * numOrgs; // Groas gets minimum
-  yourFee = groasFee - shortfallPerOrg * numOrgs; // Adjust your fee, can go negative
-  totalCost = groasFee + yourFee; // Nonprofit cost is sum of fees
-  netGain = (revenue * numOrgs) - totalCost; // Net gain reflects actual cost
-} else if (numOrgs > 3 && groasFeePerOrg < 100) {
-  let shortfallPerOrg = (100 - groasFeePerOrg) / 2; // Shared risk
-  groasFee += shortfallPerOrg * numOrgs;
-  yourFee -= shortfallPerOrg * numOrgs;
-  totalCost = groasFee + yourFee; // Nonprofit cost is sum of fees
-  netGain = (revenue * numOrgs) - totalCost; // Net gain reflects actual cost
-}
-if (totalCost > revenue * numOrgs) {
-  totalCost = revenue * numOrgs; // Cap total cost at revenue
-  netGain = 0; // Nonprofit breaks even
-}
+    if (numOrgs <= 3 && groasFeePerOrg < 100) {
+      let shortfallPerOrg = 100 - groasFeePerOrg; // Your risk, up to $100/org
+      groasFee = 100 * numOrgs; // Groas gets minimum
+      yourFee -= shortfallPerOrg * numOrgs; // Subtract full shortfall from your fee
+      totalCost = groasFee + yourFee; // Nonprofit cost is sum of fees
+      netGain = (revenue * numOrgs) - totalCost; // Net gain reflects actual cost
+    } else if (numOrgs > 3 && groasFeePerOrg < 100) {
+      let shortfallPerOrg = (100 - groasFeePerOrg) / 2; // Shared risk
+      groasFee += shortfallPerOrg * numOrgs;
+      yourFee -= shortfallPerOrg * numOrgs;
+      totalCost = groasFee + yourFee; // Nonprofit cost is sum of fees
+      netGain = (revenue * numOrgs) - totalCost; // Net gain reflects actual cost
+    }
+    if (totalCost > revenue * numOrgs) {
+      totalCost = revenue * numOrgs; // Cap total cost at revenue
+      netGain = 0; // Nonprofit breaks even
+    }
 
     document.getElementById("nonprofitCost").innerText = Math.round(totalCost);
     document.getElementById("groasFee").innerText = Math.round(groasFee);
@@ -123,7 +132,7 @@ if (totalCost > revenue * numOrgs) {
     document.getElementById("netGain").className = netGain >= 0 ? "positive" : "negative";
     document.getElementById("orgsNeeded").innerText = yourFeePerOrg > 0 ? Math.ceil(20000 / yourFeePerOrg) : "N/A";
 
-    drawChart(); // Add chart update
+    drawChart();
   }
 
   function updateRevenueInput() {
@@ -157,6 +166,7 @@ if (totalCost > revenue * numOrgs) {
     document.getElementById("revShare").value = 20;
     document.getElementById("yourSplit").value = 50;
     document.getElementById("numOrgs").value = 1;
+    document.getElementById("currentScenario").innerText = "Option 1: Pure Revenue-Share";
     update();
   }
 
@@ -166,6 +176,7 @@ if (totalCost > revenue * numOrgs) {
     document.getElementById("revShare").value = 15;
     document.getElementById("yourSplit").value = 50;
     document.getElementById("numOrgs").value = 1;
+    document.getElementById("currentScenario").innerText = "Option 2: Revenue-Share + Min Fee";
     update();
   }
 
@@ -175,6 +186,7 @@ if (totalCost > revenue * numOrgs) {
     document.getElementById("revShare").value = 10; // Base case, tweak to 20 for full setup
     document.getElementById("yourSplit").value = 50;
     document.getElementById("numOrgs").value = 1;
+    document.getElementById("currentScenario").innerText = "Option 3: Optimized Equilibrium";
     update();
   }
 
@@ -186,6 +198,7 @@ if (totalCost > revenue * numOrgs) {
     document.getElementById("revShare").value = 0;
     document.getElementById("yourSplit").value = 50;
     document.getElementById("numOrgs").value = 1;
+    document.getElementById("currentScenario").innerText = "Reset to Defaults";
     update();
   }
 
@@ -198,7 +211,7 @@ if (totalCost > revenue * numOrgs) {
       parseFloat(document.getElementById("yourFee").innerText),
       parseFloat(document.getElementById("netGain").innerText)
     ];
-    const labels = ["Nonprofit Cost", "Groas Fee", "David A. Fee", "Org Net Gain"];
+    const labels = ["Nonprofit Cost", "Groas Fee", "David A Fee", "Org Net Gain"];
     const colors = ["#ff6384", "#36a2eb", "#ffcd56", "#4bc0c0"];
     const maxValue = Math.max(...values.map(Math.abs), 1000); // Scale to max or 1000
 
@@ -235,13 +248,7 @@ if (totalCost > revenue * numOrgs) {
     ctx.stroke();
   }
 
-  window.onload = function() {
-    update(); // Initial call includes chart
-  };
+  window.onload = update;
 </script>
-<div style="margin-top: 20px;">
-  <h3>Revenue Breakdown</h3>
-  <canvas id="revenueChart" width="400" height="200"></canvas>
-</div>
 </body>
 </html>
