@@ -40,7 +40,8 @@
 
   <button onclick="setOption1()">Option 1: Pure Revenue-Share</button>
   <button onclick="setOption2()">Option 2: Revenue-Share + Min Fee</button>
-  <button onclick="setOption3()">Option 2a: Equilibrium?</button>
+<button onclick="setOption3()">Option 3: Optimized Equilibrium</button>
+<p>(algorithm that dynamically adjusts the fee structure based on revenue, ensuring these constraints. uses a tiered model with a conditional revenue share, solved to balance risk and reward)</p>
   <button onclick="reset()">Reset to Defaults</button>
 
   <div class="output">
@@ -51,102 +52,123 @@
     <p>Orgs Needed for $20k: <span id="orgsNeeded">200</span></p>
   </div>
 
-  <script>
-    function update() {
-      let adSpend = parseFloat(document.getElementById("adSpend").value);
-      let revenue = parseFloat(document.getElementById("revenue").value);
-      let baseFee = parseFloat(document.getElementById("baseFee").value);
-      let revShare = parseFloat(document.getElementById("revShare").value);
-      let yourSplit = parseFloat(document.getElementById("yourSplit").value);
-      let numOrgs = parseFloat(document.getElementById("numOrgs").value);
+<script>
+  function update() {
+    let adSpend = parseFloat(document.getElementById("adSpend").value);
+    let revenue = parseFloat(document.getElementById("revenue").value);
+    let baseFee = parseFloat(document.getElementById("baseFee").value);
+    let revShare = parseFloat(document.getElementById("revShare").value);
+    let yourSplit = parseFloat(document.getElementById("yourSplit").value);
+    let numOrgs = parseFloat(document.getElementById("numOrgs").value);
 
-      document.getElementById("adSpendValue").innerText = adSpend;
-      document.getElementById("revenueValue").innerText = revenue;
-      document.getElementById("baseFeeValue").innerText = baseFee;
-      document.getElementById("revShareValue").innerText = revShare;
-      document.getElementById("yourSplitValue").innerText = yourSplit;
-      document.getElementById("numOrgsValue").innerText = numOrgs;
+    document.getElementById("adSpendValue").innerText = adSpend;
+    document.getElementById("revenueValue").innerText = revenue;
+    document.getElementById("baseFeeValue").innerText = baseFee;
+    document.getElementById("revShareValue").innerText = revShare;
+    document.getElementById("yourSplitValue").innerText = yourSplit;
+    document.getElementById("numOrgsValue").innerText = numOrgs;
 
-      let nonprofitCost = (adSpend * (baseFee / 100) + revenue * (revShare / 100)) * numOrgs;
-      let groasFee = nonprofitCost * ((100 - yourSplit) / 100);
-      let yourFee = nonprofitCost * (yourSplit / 100);
-      let netGain = (revenue * numOrgs) - nonprofitCost;
-      let orgsNeeded = yourFee > 0 ? Math.ceil(20000 / (yourFee / numOrgs)) : "N/A";
+    // Optimized equilibrium logic
+    let baseCost = adSpend * (baseFee / 100);
+    let threshold = baseCost; // Ties threshold to base fee
+    let dynamicP = revenue > threshold ? Math.min(50, ((revenue - threshold) / revenue) * 100) : 0;
+    let revShareCost = revenue > threshold ? dynamicP / 100 * (revenue - threshold) : 0;
+    let nonprofitCostPerOrg = baseCost + revShareCost;
+    let totalCost = nonprofitCostPerOrg * numOrgs;
+    let groasFeePerOrg = nonprofitCostPerOrg * ((100 - yourSplit) / 100);
+    let yourFeePerOrg = nonprofitCostPerOrg * (yourSplit / 100);
+    let groasFee = groasFeePerOrg * numOrgs;
+    let yourFee = yourFeePerOrg * numOrgs;
+    let netGain = (revenue * numOrgs) - totalCost;
 
-      document.getElementById("nonprofitCost").innerText = Math.round(nonprofitCost);
-      document.getElementById("groasFee").innerText = Math.round(groasFee);
-      document.getElementById("yourFee").innerText = Math.round(yourFee);
-      document.getElementById("netGain").innerText = Math.round(netGain);
-      document.getElementById("netGain").className = netGain >= 0 ? "positive" : "negative";
-      document.getElementById("orgsNeeded").innerText = orgsNeeded;
+    // Risk adjustment
+    if (numOrgs <= 3 && groasFeePerOrg < 100) {
+      let shortfallPerOrg = 100 - groasFeePerOrg;
+      groasFee = 100 * numOrgs; // You front the difference
+      yourFee -= shortfallPerOrg * numOrgs; // Your risk, capped at $100/org
+      totalCost = groasFee + yourFee; // Adjust total cost
+      netGain = (revenue * numOrgs) - totalCost;
+    } else if (numOrgs > 3 && groasFeePerOrg < 100) {
+      let shortfallPerOrg = (100 - groasFeePerOrg) / 2; // Shared risk
+      groasFee += shortfallPerOrg * numOrgs;
+      yourFee -= shortfallPerOrg * numOrgs;
+      totalCost = groasFee + yourFee;
+      netGain = (revenue * numOrgs) - totalCost;
     }
 
-    function updateRevenueInput() {
-      let revenue = parseFloat(document.getElementById("revenue").value);
-      document.getElementById("revenueInput").value = revenue;
-      update();
+    document.getElementById("nonprofitCost").innerText = Math.round(totalCost);
+    document.getElementById("groasFee").innerText = Math.round(groasFee);
+    document.getElementById("yourFee").innerText = Math.round(yourFee);
+    document.getElementById("netGain").innerText = Math.round(netGain);
+    document.getElementById("netGain").className = netGain >= 0 ? "positive" : "negative";
+    document.getElementById("orgsNeeded").innerText = yourFeePerOrg > 0 ? Math.ceil(20000 / yourFeePerOrg) : "N/A";
+  }
+
+  function updateRevenueInput() {
+    let revenue = parseFloat(document.getElementById("revenue").value);
+    document.getElementById("revenueInput").value = revenue;
+    update();
+  }
+
+  function updateRevenueSlider() {
+    let revenueInput = parseFloat(document.getElementById("revenueInput").value);
+    if (revenueInput >= 0 && revenueInput <= 15000) {
+      document.getElementById("revenue").value = revenueInput;
+    } else if (revenueInput < 0) {
+      document.getElementById("revenue").value = 0;
+      document.getElementById("revenueInput").value = 0;
+    } else {
+      document.getElementById("revenue").value = 15000;
+      document.getElementById("revenueInput").value = 15000;
     }
+    update();
+  }
 
-    function updateRevenueSlider() {
-      let revenueInput = parseFloat(document.getElementById("revenueInput").value);
-      if (revenueInput >= 0 && revenueInput <= 15000) {
-        document.getElementById("revenue").value = revenueInput;
-      } else if (revenueInput < 0) {
-        document.getElementById("revenue").value = 0;
-        document.getElementById("revenueInput").value = 0;
-      } else {
-        document.getElementById("revenue").value = 15000;
-        document.getElementById("revenueInput").value = 15000;
-      }
-      update();
-    }
+  function setOption1() {
+    document.getElementById("adSpend").value = 10000;
+    document.getElementById("revenue").value = 1000;
+    document.getElementById("revenueInput").value = 1000;
+    document.getElementById("baseFee").value = 0;
+    document.getElementById("revShare").value = 20;
+    document.getElementById("yourSplit").value = 50;
+    document.getElementById("numOrgs").value = 1;
+    update();
+  }
 
-    function setOption1() {
-      document.getElementById("adSpend").value = 10000;
-      document.getElementById("revenue").value = 1000;
-      document.getElementById("revenueInput").value = 1000;
-      document.getElementById("baseFee").value = 0;
-      document.getElementById("revShare").value = 20;
-      document.getElementById("yourSplit").value = 50;
-      document.getElementById("numOrgs").value = 1;
-      update();
-    }
+  function setOption2() {
+    document.getElementById("adSpend").value = 10000;
+    document.getElementById("revenue").value = 1000;
+    document.getElementById("revenueInput").value = 1000;
+    document.getElementById("baseFee").value = 0.5;
+    document.getElementById("revShare").value = 15;
+    document.getElementById("yourSplit").value = 50;
+    document.getElementById("numOrgs").value = 1;
+    update();
+  }
 
-    function setOption2() {
-      document.getElementById("adSpend").value = 10000;
-      document.getElementById("revenue").value = 1000;
-      document.getElementById("revenueInput").value = 1000;
-      document.getElementById("baseFee").value = 0.5;
-      document.getElementById("revShare").value = 15;
-      document.getElementById("yourSplit").value = 50;
-      document.getElementById("numOrgs").value = 1;
-      update();
-    }
+  function setOption3() {
+    document.getElementById("adSpend").value = 10000;
+    document.getElementById("revenue").value = 1000;
+    document.getElementById("revenueInput").value = 1000;
+    document.getElementById("baseFee").value = 1;   // 1% base
+    document.getElementById("revShare").value = 50; // Max cap, dynamically adjusted
+    document.getElementById("yourSplit").value = 50;
+    document.getElementById("numOrgs").value = 1;
+    update();
+  }
 
-    function setOption3() {
-      document.getElementById("adSpend").value = 10000;
-      document.getElementById("revenue").value = 375;
-      document.getElementById("revenueInput").value = 375;
-      document.getElementById("baseFee").value = 3;
-      document.getElementById("revShare").value = 20;
-      document.getElementById("yourSplit").value = 50;
-      document.getElementById("numOrgs").value = 1;
-      update();
+  function reset() {
+    document.getElementById("adSpend").value = 10000;
+    document.getElementById("revenue").value = 1000;
+    document.getElementById("revenueInput").value = 1000;
+    document.getElementById("baseFee").value = 2;
+    document.getElementById("revShare").value = 0;
+    document.getElementById("yourSplit").value = 50;
+    document.getElementById("numOrgs").value = 1;
+    update();
+  }
 
-    }
-
-    function reset() {
-      document.getElementById("adSpend").value = 10000;
-      document.getElementById("revenue").value = 1000;
-      document.getElementById("revenueInput").value = 1000;
-      document.getElementById("baseFee").value = 2;
-      document.getElementById("revShare").value = 0;
-      document.getElementById("yourSplit").value = 50;
-      document.getElementById("numOrgs").value = 1;
-      update();
-    }
-
-    window.onload = update;
-  </script>
+  window.onload = update;
+</script>
 </body>
 </html>
