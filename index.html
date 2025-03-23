@@ -94,24 +94,25 @@ let revShareRate = revenue <= 0 ? 0 : (revenue <= 1000 ? revShare * (revenue / 1
 let revShareCost = (revShareRate / 100) * revenue;
 nonprofitCostPerOrg = baseCost + revShareCost;
 
-// Calculate total cost and split
+// Total cost before adjustments
 let totalCost = nonprofitCostPerOrg * numOrgs;
-let groasFee = totalCost * ((100 - yourSplit) / 100);
-let yourFee = totalCost * (yourSplit / 100);
+let groasFee = Math.max(100 * numOrgs, totalCost * ((100 - yourSplit) / 100)); // Groas minimum $100/org
+let yourFee = totalCost - groasFee; // Your fee covers rest, can go negative
 
-// Ensure Groas gets $100/org minimum
-let groasMinFee = 100 * numOrgs;
-if (groasFee < groasMinFee) {
-  let shortfall = groasMinFee - groasFee;
-  groasFee = groasMinFee;
+// Cap total cost at revenue
+totalCost = Math.min(totalCost, revenue * numOrgs);
+let netGain = (revenue * numOrgs) - totalCost;
+
+// Adjust fees if revenue-limited
+if (totalCost < groasFee + yourFee) {
   if (numOrgs <= 3) {
-    yourFee -= shortfall; // You cover full shortfall up to 3 orgs
+    yourFee = totalCost - groasFee; // You cover full shortfall up to -$100/org
   } else {
+    let shortfall = (groasFee + yourFee) - totalCost;
     groasFee -= shortfall / 2; // Split shortfall beyond 3 orgs
     yourFee -= shortfall / 2;
   }
 }
-
 // Cap nonprofit cost at revenue, adjust net gain
 totalCost = groasFee + yourFee;
 let netGain = (revenue * numOrgs) - totalCost;
@@ -197,52 +198,51 @@ if (totalCost > revenue * numOrgs) {
     update();
   }
 
-  function drawChart() {
-    const canvas = document.getElementById("revenueChart");
-    const ctx = canvas.getContext("2d");
-    const values = [
-      parseFloat(document.getElementById("nonprofitCost").innerText),
-      parseFloat(document.getElementById("groasFee").innerText),
-      parseFloat(document.getElementById("yourFee").innerText),
-      parseFloat(document.getElementById("netGain").innerText)
-    ];
-    const labels = ["Nonprofit Cost", "Groas Fee", "David A Fee", "Org Net Gain"];
-    const colors = ["#ff6384", "#36a2eb", "#ffcd56", "#4bc0c0"];
-    const maxValue = Math.max(...values.map(Math.abs), 1000); // Scale to max or 1000
+function drawChart() {
+  const canvas = document.getElementById("revenueChart");
+  const ctx = canvas.getContext("2d");
+  const values = [
+    parseFloat(document.getElementById("nonprofitCost").innerText) || 0,
+    parseFloat(document.getElementById("groasFee").innerText) || 0,
+    parseFloat(document.getElementById("yourFee").innerText) || 0,
+    parseFloat(document.getElementById("netGain").innerText) || 0
+  ];
+  const labels = ["Nonprofit Cost", "Groas Fee", "David A Fee", "Org Net Gain"];
+  const colors = ["#ff6384", "#36a2eb", "#ffcd56", "#4bc0c0"];
+  const maxValue = Math.max(...values.map(Math.abs), 1000); // Scale to max or 1000
 
-    // Clear canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  // Clear canvas
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Draw bars
-    const barWidth = 80;
-    const spacing = 20;
-    const startX = 20;
-    const baseY = canvas.height - 20;
+  // Draw bars
+  const barWidth = 80;
+  const spacing = 20;
+  const startX = 20;
+  const baseY = canvas.height - 20;
 
-    for (let i = 0; i < values.length; i++) {
-      const height = (values[i] / maxValue) * (canvas.height - 40);
-      const x = startX + i * (barWidth + spacing);
-      const y = values[i] >= 0 ? baseY - height : baseY;
+  for (let i = 0; i < values.length; i++) {
+    const height = (values[i] / maxValue) * (canvas.height - 40);
+    const x = startX + i * (barWidth + spacing);
+    const y = values[i] >= 0 ? baseY - height : baseY;
 
-      ctx.fillStyle = colors[i];
-      ctx.fillRect(x, y, barWidth, values[i] >= 0 ? height : -height);
+    ctx.fillStyle = colors[i];
+    ctx.fillRect(x, y, barWidth, values[i] >= 0 ? height : -height);
 
-      // Label
-      ctx.fillStyle = "#000";
-      ctx.font = "12px Arial";
-      ctx.textAlign = "center";
-      ctx.fillText(labels[i], x + barWidth / 2, baseY + 15);
-      ctx.fillText(`$${values[i]}`, x + barWidth / 2, y - 5 * (values[i] >= 0 ? 1 : -1));
-    }
-
-    // Zero line
-    ctx.beginPath();
-    ctx.moveTo(0, baseY);
-    ctx.lineTo(canvas.width, baseY);
-    ctx.strokeStyle = "#ccc";
-    ctx.stroke();
+    // Label
+    ctx.fillStyle = "#000";
+    ctx.font = "12px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText(labels[i], x + barWidth / 2, baseY + 15);
+    ctx.fillText(`$${values[i]}`, x + barWidth / 2, y - 5 * (values[i] >= 0 ? 1 : -1));
   }
 
+  // Zero line
+  ctx.beginPath();
+  ctx.moveTo(0, baseY);
+  ctx.lineTo(canvas.width, baseY);
+  ctx.strokeStyle = "#ccc";
+  ctx.stroke();
+}
   window.onload = update;
 </script>
 </body>
